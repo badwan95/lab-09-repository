@@ -35,23 +35,39 @@ let coordArray=[];
 
 function locationHandler(request,response){
   let city = request.query.city;
-  superagent(`https://eu1.locationiq.com/v1/search.php?key=${process.env.GEOCODE_API_KEY}&q=${city}&format=json`).then((resp)=>{
-      const geoData = resp.body;
-      const locationData = new Location(city,geoData);
-      latitude = locationData.latitude;
-      longitude = locationData.longitude;
-      const SQL = 'INSERT INTO locations(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4)';
-      const safeValues = [locationData.search_query, locationData.formatted_query,parseFloat(locationData.latitude),parseFloat(locationData.longitude)];
-      client.query(SQL,safeValues)
-      .then( results => {
-        response.status(200).json(results.rows);
-      })
-      .catch (() => app.use((error, req, res) => {
-        res.status(500).send(error);
-      }));
-      coordArray.push(latitude,longitude);
-      response.status(200).json(locationData);
-  }).catch((err)=> errorHandler(err,request,response));
+  let SQL ='SELECT * FROM locations WHERE search_query = $1';
+  const values = [city];
+  client
+  .query(SQL,values)
+  .then(result=>{
+    if (result.rows.length > 0){
+      let theResult = result.rows[0];
+      console.log('latitde is: ',theResult.latitude)
+      let lat=theResult.latitude;
+      let lon=theResult.longitude;
+      coordArray.push(lat,lon);
+      response.status(200).json(theResult);
+    }else{
+      superagent(`https://eu1.locationiq.com/v1/search.php?key=${process.env.GEOCODE_API_KEY}&q=${city}&format=json`).then((resp)=>{
+        const geoData = resp.body;
+        const locationData = new Location(city,geoData);
+        latitude = locationData.latitude;
+        longitude = locationData.longitude;
+        const SQL = 'INSERT INTO locations(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4)';
+        const safeValues = [locationData.search_query, locationData.formatted_query,parseFloat(locationData.latitude),parseFloat(locationData.longitude)];
+        client.query(SQL,safeValues)
+        .then( results => {
+          response.status(200).json(results.rows);
+        })
+        .catch (() => app.use((error, req, res) => {
+          res.status(500).send(error);
+        }));
+        coordArray.push(latitude,longitude);
+        console.log('insert into database',locationData);
+        response.status(200).json(locationData);
+    }).catch((err)=> errorHandler(err,request,response));
+    }
+  })
 }
 
 
