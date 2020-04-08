@@ -22,7 +22,7 @@ client.on('error', (err) => {
 app.get('/location',locationHandler);
 app.get('/weather',weatherHandler);
 app.get('/trails',trailsHandler);
-// app.get('/movies',moviesHandler);
+app.get('/movies',moviesHandler);
 // app.get('/yelp',yelpHandler);
 app.get('*', notFoundHandler);
 app.use(errorHandler);
@@ -66,9 +66,16 @@ function weatherHandler(request,response){
     }).catch(err=>errorHandler(err,request,response));
 }
 
-// function moviesHandler(request,response){
-
-// }
+function moviesHandler(request,response){
+  superagent(`https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${request.query.search_query}`).then(movieResult =>{
+  // console.log(movieResult.body.results);
+  let movieList = movieResult.body.results.map(value=>{
+    return new Movies(value)
+  })
+  console.log(movieList);
+  response.status(200).json(movieList);
+  }).catch(err=>errorHandler(err,request,response));
+}
 
 // function yelpHandler(request,response){
 
@@ -114,6 +121,16 @@ function Trail(data){
     this.conditions = data.conditionStatus;
     this.condition_date = data.conditionDate.split(' ')[0];
     this.condition_time = data.conditionDate.split(' ')[1];
+}
+
+function Movies(data){
+  this.title = data.title;
+  this.overview = data.overview;
+  this.average_votes = data.vote_average;
+  this.total_votes = data.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+  this.popularity = data.popularity;
+  this.released_on = data.release_date;
 }
 
 client
