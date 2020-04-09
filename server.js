@@ -23,7 +23,7 @@ app.get('/location',locationHandler);
 app.get('/weather',weatherHandler);
 app.get('/trails',trailsHandler);
 app.get('/movies',moviesHandler);
-// app.get('/yelp',yelpHandler);
+app.get('/yelp',yelpHandler);
 app.get('*', notFoundHandler);
 app.use(errorHandler);
 
@@ -93,9 +93,14 @@ function moviesHandler(request,response){
   }).catch(err=>errorHandler(err,request,response));
 }
 
-// function yelpHandler(request,response){
-
-// }
+function yelpHandler(request,response){
+  superagent(`https://api.yelp.com/v3/businesses/search?location=${request.query.search_query}`).set({"Authorization":`Bearer ${process.env.YELP_API_KEY}`}).then(result=>{
+    let businesses= result.body.businesses.map(value=>{
+      return new Business(value);
+    })
+    response.status(200).json(businesses);
+  }).catch(err=>errorHandler(err,request,response));
+}
 
 
 function trailsHandler(request,response){
@@ -147,6 +152,14 @@ function Movies(data){
   this.image_url = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
   this.popularity = data.popularity;
   this.released_on = data.release_date;
+}
+
+function Business(data){
+  this.name = data.name;
+  this.image_url = data.image_url;
+  this.price = data.price;
+  this.rating = data.rating;
+  this.url = data.url;
 }
 
 client
